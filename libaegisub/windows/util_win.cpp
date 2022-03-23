@@ -22,48 +22,68 @@
 #include <windows.h>
 
 namespace agi {
-	namespace util {
+    namespace util {
 
-using agi::charset::ConvertW;
+        using agi::charset::ConvertW;
 
-std::string ErrorString(int error) {
-	LPWSTR lpstr = nullptr;
+        std::string ErrorString(int error) {
+            LPWSTR lpstr = nullptr;
 
-	if(FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, nullptr, error, 0, reinterpret_cast<LPWSTR>(&lpstr), 0, nullptr) == 0) {
-		/// @todo Return the actual 'unknown error' string from windows.
-		return "Unknown Error";
-	}
+            if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, nullptr, error, 0,
+                              reinterpret_cast<LPWSTR>(&lpstr), 0, nullptr) == 0) {
+                /// @todo Return the actual 'unknown error' string from windows.
+                return "Unknown Error";
+            }
 
-	std::string str = ConvertW(lpstr);
-	LocalFree(lpstr);
-	return str;
-}
+            std::string str = ConvertW(lpstr);
+            LocalFree(lpstr);
+            return str;
+        }
 
-#define MS_VC_EXCEPTION 0x406d1388
 
 /// Parameters for setting the thread name
-struct THREADNAME_INFO {
-	DWORD dwType;     ///< must be 0x1000
-	LPCSTR szName;    ///< pointer to name (in same addr space)
-	DWORD dwThreadID; ///< thread ID (-1 caller thread)
-	DWORD dwFlags;    ///< reserved for future use, most be zero
-};
+        struct THREADNAME_INFO {
+            DWORD dwType;     ///< must be 0x1000
+            LPCSTR szName;    ///< pointer to name (in same addr space)
+            DWORD dwThreadID; ///< thread ID (-1 caller thread)
+            DWORD dwFlags;    ///< reserved for future use, most be zero
+        };
 
-void SetThreadName(LPCSTR szThreadName) {
-	THREADNAME_INFO info;
-	info.dwType = 0x1000;
-	info.szName = szThreadName;
-	info.dwThreadID = -1;
-	info.dwFlags = 0;
-	__try {
-		RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(DWORD), (ULONG_PTR *)&info);
-	}
-	__except (EXCEPTION_CONTINUE_EXECUTION) {}
-}
+        typedef struct _MY_EXCEPTION_REGISTRATION_RECORD {
+            struct _MY_EXCEPTION_REGISTRATION_RECORD *Next;
+            void *Handler;
+        } MY_EXCEPTION_REGISTRATION_RECORD;
 
-void sleep_for(int ms) {
-	std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-}
+        static EXCEPTION_DISPOSITION NTAPI continue_execution(EXCEPTION_RECORD *rec,
+                                                              void *frame, CONTEXT *ctx, void *disp) {
+            return ExceptionContinueExecution;
+        }
 
-	} // namespace io
+        void SetThreadName(LPCSTR szThreadName) {
+            THREADNAME_INFO info;
+            info.dwType = 0x1000;
+            info.szName = szThreadName;
+            info.dwThreadID = -1;
+            info.dwFlags = 0;
+
+            NT_TIB *tib = ((NT_TIB*)NtCurrentTeb());
+
+            MY_EXCEPTION_REGISTRATION_RECORD rec;
+            rec.Next = (MY_EXCEPTION_REGISTRATION_RECORD *)tib->ExceptionList;
+            rec.Handler = (char *) continue_execution;
+
+            // push our handler, raise, and finally pop our handler
+            tib->ExceptionList = (_EXCEPTION_REGISTRATION_RECORD *) &rec;
+            DWORD MS_VC_EXCEPTION = 0x406D1388;
+            RaiseException(MS_VC_EXCEPTION, 0,
+                           sizeof(info) / sizeof(DWORD),
+                           (ULONG_PTR *) &info);
+            tib->ExceptionList = (_EXCEPTION_REGISTRATION_RECORD *) (((MY_EXCEPTION_REGISTRATION_RECORD *) tib->ExceptionList)->Next);
+        }
+
+        void sleep_for(int ms) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+        }
+
+    } // namespace io
 } // namespace agi

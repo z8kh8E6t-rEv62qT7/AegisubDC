@@ -14,6 +14,9 @@
 //
 // Aegisub Project http://www.aegisub.org/
 
+#include <wx/string.h>
+#include <wx/stackwalk.h>
+
 #include "crash_writer.h"
 
 #include "version.h"
@@ -22,8 +25,6 @@
 #include <libaegisub/util.h>
 
 #include <boost/filesystem/fstream.hpp>
-#include <wx/string.h>
-#include <wx/stackwalk.h>
 
 using namespace agi;
 
@@ -73,10 +74,10 @@ void Initialize(fs::path const& path) {
 void Cleanup() { }
 
 void Write() {
-#if wxUSE_STACKWALKER == 1
-	StackWalker walker("Fatal exception");
-	walker.WalkFromException();
-#endif
+//#if wxUSE_STACKWALKER == 1
+//	StackWalker walker("Fatal exception");
+//	walker.WalkFromException();
+//#endif
 }
 
 void Write(std::string const& error) {

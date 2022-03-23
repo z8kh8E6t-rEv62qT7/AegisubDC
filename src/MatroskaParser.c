@@ -40,13 +40,13 @@
 #include <string.h>
 #include <setjmp.h>
 
-#ifdef _WIN32
-// MS names some functions differently
-#define	alloca	  _alloca
-#define	inline	  __inline
+// #ifdef _WIN32
+// // MS names some functions differently
+// #define	_alloca	  _alloca
+// #define	inline	  __inline
 
 #include <tchar.h>
-#endif
+// #endif
 
 #ifndef EVCBUG
 #define	EVCBUG
@@ -73,8 +73,8 @@
 #define	MAXFRAME	      (4*1048576)
 
 #ifdef WIN32
-#define	LL(x)	x##i64
-#define	ULL(x)	x##ui64
+#define	LL(x)	x##ill
+#define	ULL(x)	x##ull
 #else
 #define	LL(x)	x##ll
 #define	ULL(x)	x##ull
@@ -810,7 +810,9 @@ shift:
     }
   } else if (len == 8) {
     uint64_t  ui = readUInt(mf,(unsigned)len);
-    f.v = (ui & LL(0xfffffffffffff)) | LL(0x10000000000000);
+    uint64_t cons1 = LL(0xfffffffffffff);
+    uint64_t cons2 = LL(0x10000000000000);
+    f.v = ui & cons1 | cons2;
     if (ui & 0x80000000)
       f.v = -f.v;
     shift = (int)((ui >> 52) & 0x7ff);

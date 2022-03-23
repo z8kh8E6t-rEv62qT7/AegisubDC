@@ -26,6 +26,7 @@
 #include <boost/interprocess/detail/os_thread_functions.hpp>
 #include <ctime>
 #include <thread>
+#include <sstream>
 
 
 namespace {
